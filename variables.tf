@@ -700,3 +700,7 @@ variable "extraManifests" {
   default     = null
   description = "Additional manifests URL applied during Talos bootstrap."
 }
+
+variable "apiserver_sa_key" {
+  type = string
+}
