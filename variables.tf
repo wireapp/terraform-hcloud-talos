@@ -298,7 +298,7 @@ variable "worker_nodes" {
     condition = alltrue([
       for node in var.worker_nodes : contains([
         "cx11", "cx21", "cx22", "cx31", "cx32", "cx41", "cx42", "cx51", "cx52",
-        "cpx11", "cpx21", "cpx31", "cpx41", "cpx51",
+        "cpx11", "cpx21", "cpx31", "cpx41", "cpx51", "cpx62",
         "cax11", "cax21", "cax31", "cax41",
         "ccx13", "ccx23", "ccx33", "ccx43", "ccx53", "ccx63"
       ], node.type)
