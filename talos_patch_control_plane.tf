@@ -132,6 +132,9 @@ locals {
           certSANs  = local.cert_SANs
           extraArgs = var.kube_api_extra_args
         }
+        serviceAccount = {
+          key = var.apiserver_sa_key
+        }
         controllerManager = {
           extraArgs = {
             "cloud-provider"           = "external"
