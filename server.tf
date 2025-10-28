@@ -143,6 +143,8 @@ resource "hcloud_server" "control_planes" {
     ignore_changes = [
       user_data,
       image,
+      firewall_ids, # without this attaching new firewalls via label_selector causes drift
+      network
       iso
     ]
   }
@@ -191,6 +193,7 @@ resource "hcloud_server" "workers" {
     ignore_changes = [
       user_data,
       image,
+      firewall_ids, # without this attaching new firewalls via label_selector causes drift
       iso
     ]
   }
