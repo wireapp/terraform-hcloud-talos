@@ -135,7 +135,9 @@ resource "hcloud_server" "control_planes" {
   lifecycle {
     ignore_changes = [
       user_data,
-      image
+      image,
+      firewall_ids, # without this attaching new firewalls via label_selector causes drift
+      network
     ]
   }
 }
@@ -181,7 +183,8 @@ resource "hcloud_server" "workers" {
   lifecycle {
     ignore_changes = [
       user_data,
-      image
+      image,
+      firewall_ids # without this attaching new firewalls via label_selector causes drift
     ]
   }
 }
@@ -229,7 +232,8 @@ resource "hcloud_server" "workers_new" {
   lifecycle {
     ignore_changes = [
       user_data,
-      image
+      image,
+      firewall_ids # without this attaching new firewalls via label_selector causes drift
     ]
   }
 }
