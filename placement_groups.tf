@@ -7,9 +7,16 @@ resource "hcloud_placement_group" "control_plane" {
 }
 
 resource "hcloud_placement_group" "worker" {
-  name = "${local.cluster_prefix}worker"
-  type = "spread"
+  count  = local.total_worker_count > 0 ? ceil(local.total_worker_count / 10) : 0
+  # Preserve original name for the first group to avoid drift
+  name   = "${local.cluster_prefix}worker${count.index == 0 ? "" : "-${count.index + 1}"}"
+  type   = "spread"
   labels = {
     "cluster" = var.cluster_name
   }
+}
+
+moved {
+  from = hcloud_placement_group.worker
+  to   = hcloud_placement_group.worker[0]
 }
