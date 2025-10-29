@@ -9,7 +9,7 @@ terraform {
 
     talos = {
       source  = "siderolabs/talos"
-      version = ">= 0.9.0"
+      version = ">= 0.8.0"
     }
 
     http = {
@@ -19,13 +19,15 @@ terraform {
 
     helm = {
       source  = "hashicorp/helm"
-      version = ">= 3.0.2"
+      version = ">= 2.16"
     }
 
-    kubectl = {
-      source  = "alekc/kubectl"
-      version = ">= 2.1.3"
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = ">= 2.22.0"
     }
+
+    
 
     tls = {
       source  = "hashicorp/tls"
@@ -39,7 +41,7 @@ provider "hcloud" {
 }
 
 provider "helm" {
-  kubernetes = {
+  kubernetes {
     host                   = local.kubeconfig_data.host
     client_certificate     = local.kubeconfig_data.client_certificate
     client_key             = local.kubeconfig_data.client_key
@@ -47,11 +49,11 @@ provider "helm" {
   }
 }
 
-provider "kubectl" {
+provider "kubernetes" {
   host                   = local.kubeconfig_data.host
   client_certificate     = local.kubeconfig_data.client_certificate
   client_key             = local.kubeconfig_data.client_key
   cluster_ca_certificate = local.kubeconfig_data.cluster_ca_certificate
-  load_config_file       = false
-  apply_retry_count      = 3
 }
+
+## kubectl provider removed in favor of official kubernetes + helm providers

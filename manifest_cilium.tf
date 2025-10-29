@@ -1,17 +1,8 @@
-data "helm_template" "cilium_default" {
-  count     = var.cilium_values == null ? 1 : 0
-  name      = "cilium"
-  namespace = "kube-system"
-
-  repository   = "https://helm.cilium.io"
-  chart        = "cilium"
-  version      = var.cilium_version
-  kube_version = var.kubernetes_version
-
-  set = [
+locals {
+  cilium_default_set = var.cilium_values == null ? [
     {
       name  = "operator.replicas"
-      value = var.control_plane_count > 1 ? 2 : 1
+      value = tostring(var.control_plane_count > 1 ? 2 : 1)
     },
     {
       name  = "ipam.mode"
@@ -67,7 +58,7 @@ data "helm_template" "cilium_default" {
     },
     {
       name  = "k8sServicePort"
-      value = local.api_port_kube_prism
+      value = tostring(local.api_port_kube_prism)
     },
     {
       name  = "hubble.enabled"
@@ -85,53 +76,46 @@ data "helm_template" "cilium_default" {
       name  = "operator.prometheus.serviceMonitor.enabled"
       value = var.cilium_enable_service_monitors ? "true" : "false"
     }
-  ]
+  ] : []
 }
 
-data "helm_template" "cilium_from_values" {
-  count     = var.cilium_values != null ? 1 : 0
-  name      = "cilium"
-  namespace = "kube-system"
+resource "helm_release" "cilium" {
+  count      = var.control_plane_count > 0 ? 1 : 0
+  name       = "cilium"
+  namespace  = "kube-system"
+  repository = "https://helm.cilium.io"
+  chart      = "cilium"
+  version    = var.cilium_version
 
-  repository   = "https://helm.cilium.io"
-  chart        = "cilium"
-  version      = var.cilium_version
-  kube_version = var.kubernetes_version
-  values       = var.cilium_values
-}
+  wait             = true
+  timeout          = 1200
+  cleanup_on_fail  = true
+  create_namespace = false
 
-data "kubectl_file_documents" "cilium" {
-  content = coalesce(
-    can(data.helm_template.cilium_from_values[0].manifest) ? data.helm_template.cilium_from_values[0].manifest : null,
-    can(data.helm_template.cilium_default[0].manifest) ? data.helm_template.cilium_default[0].manifest : null
-  )
-}
+  # If user-provided values are supplied, pass them through.
+  values = var.cilium_values == null ? [] : var.cilium_values
 
-resource "kubectl_manifest" "apply_cilium" {
-  for_each   = var.control_plane_count > 0 ? data.kubectl_file_documents.cilium.manifests : {}
-  yaml_body  = each.value
-  apply_only = true
+  dynamic "set" {
+    for_each = local.cilium_default_set
+    content {
+      name  = set.value.name
+      value = set.value.value
+    }
+  }
+
   depends_on = [data.http.talos_health]
 }
 
+resource "helm_release" "prometheus_operator_crds" {
+  count      = var.deploy_prometheus_operator_crds && var.control_plane_count > 0 ? 1 : 0
+  name       = "prometheus-operator-crds"
+  namespace  = "kube-system"
+  repository = "https://prometheus-community.github.io/helm-charts"
+  chart      = "prometheus-operator-crds"
 
-data "helm_template" "prometheus_operator_crds" {
-  count        = var.deploy_prometheus_operator_crds ? 1 : 0
-  chart        = "prometheus-operator-crds"
-  name         = "prometheus-operator-crds"
-  repository   = "https://prometheus-community.github.io/helm-charts"
-  kube_version = var.kubernetes_version
-}
+  wait            = true
+  timeout         = 600
+  cleanup_on_fail = true
 
-data "kubectl_file_documents" "prometheus_operator_crds" {
-  count   = var.deploy_prometheus_operator_crds ? 1 : 0
-  content = data.helm_template.prometheus_operator_crds[0].manifest
-}
-
-resource "kubectl_manifest" "apply_prometheus_operator_crds" {
-  for_each          = var.control_plane_count > 0 && var.deploy_prometheus_operator_crds ? data.kubectl_file_documents.prometheus_operator_crds[0].manifests : {}
-  yaml_body         = each.value
-  server_side_apply = true
-  apply_only        = true
-  depends_on        = [data.http.talos_health]
+  depends_on = [data.http.talos_health]
 }
