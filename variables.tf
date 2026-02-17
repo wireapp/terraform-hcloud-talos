@@ -198,21 +198,8 @@ variable "control_plane_count" {
 }
 
 variable "control_plane_server_type" {
-  type        = string
-  description = <<EOF
-    The server type to use for the control plane nodes.
-    Possible values: cx11, cx21, cx22, cx31, cx32, cx41, cx42, cx51, cx52, cpx11, cpx21, cpx31,
-    cpx41, cpx51, cax11, cax21, cax31, cax41, ccx13, ccx23, ccx33, ccx43, ccx53, ccx63
-  EOF
-  validation {
-    condition = contains([
-      "cx11", "cx21", "cx22", "cx31", "cx32", "cx41", "cx42", "cx51", "cx52",
-      "cpx11", "cpx21", "cpx31", "cpx41", "cpx51",
-      "cax11", "cax21", "cax31", "cax41",
-      "ccx13", "ccx23", "ccx33", "ccx43", "ccx53", "ccx63"
-    ], var.control_plane_server_type)
-    error_message = "Invalid control plane server type."
-  }
+  type    = string
+  default = "cpx32"
 }
 
 
@@ -238,22 +225,8 @@ variable "worker_count" {
 }
 
 variable "worker_server_type" {
-  type        = string
-  default     = "cx11"
-  description = <<EOF
-    DEPRECATED: Use worker_nodes instead. The server type to use for the worker nodes.
-    Possible values: cx11, cx21, cx22, cx31, cx32, cx41, cx42, cx51, cx52, cpx11, cpx21, cpx31,
-    cpx41, cpx51, cax11, cax21, cax31, cax41, ccx13, ccx23, ccx33, ccx43, ccx53, ccx63
-  EOF
-  validation {
-    condition = contains([
-      "cx11", "cx21", "cx22", "cx31", "cx32", "cx41", "cx42", "cx51", "cx52",
-      "cpx11", "cpx21", "cpx31", "cpx41", "cpx51",
-      "cax11", "cax21", "cax31", "cax41",
-      "ccx13", "ccx23", "ccx33", "ccx43", "ccx53", "ccx63"
-    ], var.worker_server_type)
-    error_message = "Invalid worker server type."
-  }
+  type    = string
+  default = "cpx42"
 }
 
 variable "worker_nodes" {
