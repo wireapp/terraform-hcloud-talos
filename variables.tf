@@ -229,6 +229,16 @@ variable "worker_server_type" {
   default = "cpx42"
 }
 
+variable "worker_placement_group_size" {
+  type        = number
+  default     = 5
+  description = "Maximum number of worker nodes per spread placement group."
+  validation {
+    condition     = var.worker_placement_group_size >= 1
+    error_message = "worker_placement_group_size must be at least 1."
+  }
+}
+
 variable "worker_nodes" {
   type = list(object({
     type   = string
