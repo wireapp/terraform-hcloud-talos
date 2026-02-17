@@ -273,6 +273,7 @@ module "talos" {
       type = "cax21"
     }
   ]
+  worker_placement_group_size = 5
 
   network_ipv4_cidr = "10.0.0.0/16"
   node_ipv4_cidr    = "10.0.1.0/24"

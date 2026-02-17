@@ -159,7 +159,7 @@ resource "hcloud_server" "workers" {
   server_type        = each.value.server_type
   user_data          = data.talos_machine_configuration.worker[each.value.name].machine_configuration
   ssh_keys           = [hcloud_ssh_key.this.id]
-  placement_group_id = hcloud_placement_group.worker[floor(each.value.index / 10)].id
+  placement_group_id = hcloud_placement_group.worker[floor(each.value.index / var.worker_placement_group_size)].id
 
   labels = merge({
     "cluster"     = var.cluster_name,
