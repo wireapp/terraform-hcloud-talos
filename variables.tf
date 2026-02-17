@@ -285,7 +285,6 @@ variable "control_plane_nodes" {
   }))
   description = <<EOF
     List of control plane node configurations.
-
     Each entry represents one control plane node.
     The total number of control planes must be odd (1, 3, 5) and at most 5.
 
