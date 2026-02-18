@@ -10,7 +10,7 @@ packer {
 
 variable "talos_version" {
   type    = string
-  default = "v1.11.0"
+  default = "v1.12.0"
 }
 
 variable "image_url_arm" {
@@ -52,7 +52,7 @@ locals {
 # Source for the Talos ARM image
 source "hcloud" "talos-arm" {
   rescue       = "linux64"
-  image        = "debian-11"
+  image        = "debian-12"
   location     = "${var.server_location}"
   server_type  = "cax11"
   ssh_username = "root"
@@ -70,9 +70,9 @@ source "hcloud" "talos-arm" {
 # Source for the Talos x86 image
 source "hcloud" "talos-x86" {
   rescue       = "linux64"
-  image        = "debian-11"
+  image        = "debian-12"
   location     = "${var.server_location}"
-  server_type  = "cx22"
+  server_type  = "cpx22"
   ssh_username = "root"
 
   snapshot_name   = "Talos Linux ${var.talos_version} x86 by hcloud-talos"

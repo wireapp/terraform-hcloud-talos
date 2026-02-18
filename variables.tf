@@ -198,21 +198,8 @@ variable "control_plane_count" {
 }
 
 variable "control_plane_server_type" {
-  type        = string
-  description = <<EOF
-    The server type to use for the control plane nodes.
-    Possible values: cx11, cx21, cx22, cx31, cx32, cx41, cx42, cx51, cx52, cpx11, cpx21, cpx31,
-    cpx41, cpx51, cax11, cax21, cax31, cax41, ccx13, ccx23, ccx33, ccx43, ccx53, ccx63
-  EOF
-  validation {
-    condition = contains([
-      "cx11", "cx21", "cx22", "cx31", "cx32", "cx41", "cx42", "cx51", "cx52",
-      "cpx11", "cpx21", "cpx31", "cpx41", "cpx51",
-      "cax11", "cax21", "cax31", "cax41",
-      "ccx13", "ccx23", "ccx33", "ccx43", "ccx53", "ccx63"
-    ], var.control_plane_server_type)
-    error_message = "Invalid control plane server type."
-  }
+  type    = string
+  default = "cpx32"
 }
 
 
@@ -238,21 +225,17 @@ variable "worker_count" {
 }
 
 variable "worker_server_type" {
-  type        = string
-  default     = "cx11"
-  description = <<EOF
-    DEPRECATED: Use worker_nodes instead. The server type to use for the worker nodes.
-    Possible values: cx11, cx21, cx22, cx31, cx32, cx41, cx42, cx51, cx52, cpx11, cpx21, cpx31,
-    cpx41, cpx51, cax11, cax21, cax31, cax41, ccx13, ccx23, ccx33, ccx43, ccx53, ccx63
-  EOF
+  type    = string
+  default = "cpx42"
+}
+
+variable "worker_placement_group_size" {
+  type        = number
+  default     = 5
+  description = "Maximum number of worker nodes per spread placement group."
   validation {
-    condition = contains([
-      "cx11", "cx21", "cx22", "cx31", "cx32", "cx41", "cx42", "cx51", "cx52",
-      "cpx11", "cpx21", "cpx31", "cpx41", "cpx51",
-      "cax11", "cax21", "cax31", "cax41",
-      "ccx13", "ccx23", "ccx33", "ccx43", "ccx53", "ccx63"
-    ], var.worker_server_type)
-    error_message = "Invalid worker server type."
+    condition     = var.worker_placement_group_size >= 1
+    error_message = "worker_placement_group_size must be at least 1."
   }
 }
 
@@ -338,7 +321,7 @@ variable "kube_api_extra_args" {
 
 variable "kubernetes_version" {
   type        = string
-  default     = "1.30.3"
+  default     = "1.34.2"
   description = <<EOF
     The Kubernetes version to use. If not set, the latest version supported by Talos is used: https://www.talos.dev/v1.7/introduction/support-matrix/
     Needs to be compatible with the `cilium_version`: https://docs.cilium.io/en/stable/network/kubernetes/compatibility/
@@ -410,7 +393,7 @@ variable "registries" {
 # Deployments
 variable "cilium_version" {
   type        = string
-  default     = "1.16.2"
+  default     = "1.19.2"
   description = <<EOF
     The version of Cilium to deploy. If not set, the `1.16.0` version will be used.
     Needs to be compatible with the `kubernetes_version`: https://docs.cilium.io/en/stable/network/kubernetes/compatibility/
