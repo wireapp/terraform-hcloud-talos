@@ -4,6 +4,9 @@
   assignees: ["mrclrchtr"],
   prHourlyLimit: 0,
   rangeStrategy: "bump",
+  ignorePaths: [
+    "examples/**",
+  ],
   packageRules: [
     {
       matchManagers: ["terraform"],

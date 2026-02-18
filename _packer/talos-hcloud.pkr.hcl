@@ -2,7 +2,7 @@
 packer {
   required_plugins {
     hcloud = {
-      version = "v1.7.0"
+      version = "v1.7.1"
       source  = "github.com/hetznercloud/hcloud"
     }
   }
@@ -10,12 +10,22 @@ packer {
 
 variable "talos_version" {
   type    = string
-  default = "v1.11.0"
+  default = "v1.12.2"
 }
 
 variable "image_url_arm" {
   type    = string
   default = null
+}
+
+variable "server_type_arm" {
+  type    = string
+  default = "cax11"
+}
+
+variable "server_type_x86" {
+  type    = string
+  default = "cx23"
 }
 
 variable "image_url_x86" {
@@ -52,9 +62,9 @@ locals {
 # Source for the Talos ARM image
 source "hcloud" "talos-arm" {
   rescue       = "linux64"
-  image        = "debian-11"
+  image        = "debian-13"
   location     = "${var.server_location}"
-  server_type  = "cax11"
+  server_type  = "${var.server_type_arm}"
   ssh_username = "root"
 
   snapshot_name   = "Talos Linux ${var.talos_version} ARM by hcloud-talos"
@@ -70,9 +80,9 @@ source "hcloud" "talos-arm" {
 # Source for the Talos x86 image
 source "hcloud" "talos-x86" {
   rescue       = "linux64"
-  image        = "debian-11"
+  image        = "debian-13"
   location     = "${var.server_location}"
-  server_type  = "cx22"
+  server_type  = "${var.server_type_x86}"
   ssh_username = "root"
 
   snapshot_name   = "Talos Linux ${var.talos_version} x86 by hcloud-talos"

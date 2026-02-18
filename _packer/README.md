@@ -8,7 +8,15 @@ This directory contains Packer configuration to build Talos OS images suitable f
 >
 > ```hcl
 > # _packer/hcloud.auto.pkrvars.hcl
-> talos_version = "v1.7.0" # Replace with your desired Talos version
+> talos_version = "v1.12.0" # Replace with your desired Talos version
+>
+> # Optionally, set custom server type for building snapshot:
+> # server_type_arm = "cax21"
+> # server_type_x86 = "cx33"
+>
+> # Optionally, Hetzner Cloud location (region) where the temporary build server is created.
+> # Use a location where the provided server types are available.
+> # server_location = "fsn1"
 >
 > # Optionally, add custom image URLs if using the Image Factory:
 > # image_url_arm = "https://factory.talos.dev/image/<SCHEMATIC_ID>/<TALOS_VERSION>/hcloud-arm64.raw.xz"
@@ -55,7 +63,7 @@ If you need to include additional system extensions in your Talos images (e.g., 
     - ARM: `https://factory.talos.dev/image/<SCHEMATIC_ID>/<TALOS_VERSION>/hcloud-arm64.raw.xz`
     - x86: `https://factory.talos.dev/image/<SCHEMATIC_ID>/<TALOS_VERSION>/hcloud-amd64.raw.xz`
 
-    Replace `<SCHEMATIC_ID>` with the ID obtained in the previous step and `<TALOS_VERSION>` with the target Talos version (e.g., `v1.7.0`).
+    Replace `<SCHEMATIC_ID>` with the ID obtained in the previous step and `<TALOS_VERSION>` with the target Talos version (e.g., `v1.12.0`).
 
 4.  **Override Packer Variables:**
     Create a file named `hcloud.auto.pkrvars.hcl` in this directory to provide the custom image URLs and the corresponding Talos version to Packer. The file should look like this:
