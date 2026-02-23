@@ -134,7 +134,7 @@ locals {
           extraArgs = var.kube_api_extra_args
         }
         serviceAccount = {
-          key = var.apiserver_sa_key
+          key = local.apiserver_sa_key
         }
         controllerManager = {
           extraArgs = {

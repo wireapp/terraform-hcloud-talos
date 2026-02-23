@@ -85,6 +85,7 @@ variable "cluster_api_host" {
 
 variable "location_name" {
   type        = string
+  default     = "nbg1"
   description = <<EOF
     The name of the location where the cluster will be created.
     This is used to determine the region and zone of the cluster and network.
@@ -166,22 +167,30 @@ variable "extra_firewall_rules" {
   description = "Additional firewall rules to apply to the cluster."
 }
 
+variable "firewall_allow_internal_cluster_traffic" {
+  type        = bool
+  default     = true
+  description = "If true, allow internal node/pod/service CIDRs to communicate over TCP/UDP."
+}
+
 variable "firewall_kube_api_source" {
   type        = list(string)
-  default     = null
+  default     = ["0.0.0.0/0"]
   description = <<EOF
     Source networks that have Kube API access to the servers.
-    If null (default), the all traffic is blocked.
+    Default allows access from everywhere (`0.0.0.0/0`).
+    If null, all traffic is blocked.
     If set, this overrides the firewall_use_current_ip setting.
   EOF
 }
 
 variable "firewall_talos_api_source" {
   type        = list(string)
-  default     = null
+  default     = ["0.0.0.0/0"]
   description = <<EOF
     Source networks that have Talos API access to the servers.
-    If null (default), the all traffic is blocked.
+    Default allows access from everywhere (`0.0.0.0/0`).
+    If null, all traffic is blocked.
     If set, this overrides the firewall_use_current_ip setting.
   EOF
 }
@@ -233,25 +242,35 @@ variable "enable_kube_span" {
 variable "network_ipv4_cidr" {
   description = "The main network cidr that all subnets will be created upon."
   type        = string
-  default     = "10.0.0.0/16"
+  default     = "10.0.0.0/8"
 }
 
 variable "node_ipv4_cidr" {
   description = "Node CIDR, used for the nodes (control plane and worker nodes) in the cluster."
   type        = string
-  default     = "10.0.1.0/24"
+  default     = "10.0.0.0/16"
 }
 
 variable "pod_ipv4_cidr" {
   description = "Pod CIDR, used for the pods in the cluster."
   type        = string
-  default     = "10.0.16.0/20"
+  default     = "10.4.0.0/14"
 }
 
 variable "service_ipv4_cidr" {
   description = "Service CIDR, used for the services in the cluster."
   type        = string
-  default     = "10.0.8.0/21"
+  default     = "10.8.0.0/16"
+}
+
+variable "node_ipv4_pod_cidr_mask_size" {
+  type        = string
+  default     = "24"
+  description = "IPv4 PodCIDR mask size assigned by kube-controller-manager per node."
+  validation {
+    condition     = can(regex("^(3[0-2]|[12]?[0-9])$", var.node_ipv4_pod_cidr_mask_size))
+    error_message = "node_ipv4_pod_cidr_mask_size must be between 0 and 32."
+  }
 }
 
 # Server
@@ -441,7 +460,7 @@ variable "disable_x86" {
 
 variable "disable_arm" {
   type        = bool
-  default     = false
+  default     = true
   description = "If true, arm images will not be used."
 }
 
@@ -516,8 +535,9 @@ variable "kube_api_extra_args" {
 
 variable "kubernetes_version" {
   type        = string
+  default     = "1.34.4"
   description = <<EOF
-    The Kubernetes version to use. This variable is required.
+    The Kubernetes version to use.
 
     Choose a version compatible with your Talos version:
     https://docs.siderolabs.com/talos/latest/getting-started/support-matrix
@@ -609,9 +629,9 @@ variable "registries" {
 # Deployments
 variable "cilium_version" {
   type        = string
-  default     = "1.19.2"
+  default     = "1.19.1"
   description = <<EOF
-    The version of Cilium to deploy. If not set, the `1.16.0` version will be used.
+    The version of Cilium to deploy.
     Needs to be compatible with the `kubernetes_version`: https://docs.cilium.io/en/stable/network/kubernetes/compatibility/
   EOF
 }
@@ -644,6 +664,62 @@ variable "cilium_enable_service_monitors" {
     Service Monitor requires monitoring.coreos.com/v1 CRDs.
     You can use the deploy_prometheus_operator_crds variable to deploy them.
   EOF
+}
+
+variable "cilium_enable_k8s_network_policy" {
+  type        = bool
+  default     = false
+  description = "Enable Cilium's k8sNetworkPolicy support."
+}
+
+variable "cilium_hubble_enabled" {
+  type        = bool
+  default     = true
+  description = "Enable Hubble."
+}
+
+variable "cilium_hubble_tls_auto_method" {
+  type        = string
+  default     = "cronJob"
+  description = "Hubble TLS auto-generation method."
+}
+
+variable "cilium_hubble_relay_enabled" {
+  type        = bool
+  default     = true
+  description = "Enable Hubble relay."
+}
+
+variable "cilium_hubble_relay_replicas" {
+  type        = number
+  default     = 1
+  description = "Number of Hubble relay replicas."
+}
+
+variable "cilium_hubble_ui_enabled" {
+  type        = bool
+  default     = true
+  description = "Enable Hubble UI."
+}
+
+variable "cilium_hubble_ui_replicas" {
+  type        = number
+  default     = 1
+  description = "Number of Hubble UI replicas."
+}
+
+variable "cilium_hubble_metrics" {
+  type = list(string)
+  default = [
+    "dns",
+    "drop",
+    "tcp",
+    "flow",
+    "port-distribution",
+    "icmp",
+    "httpV2",
+  ]
+  description = "Hubble metrics to enable."
 }
 
 variable "deploy_cilium" {
@@ -693,8 +769,8 @@ variable "deploy_hcloud_ccm" {
 
 variable "hcloud_ccm_version" {
   type        = string
-  default     = null
-  description = "The version of the Hetzner Cloud Controller Manager to deploy. If not set, the latest version will be used."
+  default     = "1.30.0"
+  description = "The version of the Hetzner Cloud Controller Manager to deploy."
 }
 
 variable "disable_talos_coredns" {
@@ -710,5 +786,7 @@ variable "extraManifests" {
 }
 
 variable "apiserver_sa_key" {
-  type = string
+  type        = string
+  default     = null
+  description = "Base64-encoded PEM private key for Kubernetes service-account tokens. If null, one is generated."
 }

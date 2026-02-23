@@ -52,6 +52,22 @@ locals {
         source_ips  = var.firewall_talos_api_source != null ? var.firewall_talos_api_source : local.current_ips
       }
     ],
+    var.firewall_allow_internal_cluster_traffic ? [
+      {
+        description = "Allow internal cluster TCP"
+        direction   = "in"
+        protocol    = "tcp"
+        port        = "any"
+        source_ips  = [local.node_ipv4_cidr, local.pod_ipv4_cidr, local.service_ipv4_cidr]
+      },
+      {
+        description = "Allow internal cluster UDP"
+        direction   = "in"
+        protocol    = "udp"
+        port        = "any"
+        source_ips  = [local.node_ipv4_cidr, local.pod_ipv4_cidr, local.service_ipv4_cidr]
+      },
+    ] : [],
   )
 
   # create a new firewall list based on base_firewall_rules but with direction-protocol-port as key

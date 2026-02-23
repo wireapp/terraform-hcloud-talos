@@ -2,6 +2,27 @@
 
 This document describes how to migrate between major versions of this module.
 
+## Current Defaults (wire profile)
+
+The module now ships with opinionated defaults used by the `wire` environments:
+
+- `location_name = "nbg1"`
+- `disable_arm = true`
+- `network_ipv4_cidr = "10.0.0.0/8"`
+- `node_ipv4_cidr = "10.0.0.0/16"`
+- `pod_ipv4_cidr = "10.4.0.0/14"`
+- `service_ipv4_cidr = "10.8.0.0/16"`
+- `node_ipv4_pod_cidr_mask_size = "24"`
+- `kubernetes_version = "1.34.4"`
+- `cilium_version = "1.19.1"`
+- `hcloud_ccm_version = "1.30.0"`
+- API firewalls default to `0.0.0.0/0` for both Kubernetes and Talos APIs.
+- Internal cluster TCP/UDP firewall rules are enabled by default.
+- `apiserver_sa_key` is optional; when omitted, the module generates an RSA key.
+- Cilium defaults now include Hubble enabled (relay/UI/metrics) and disabled k8sNetworkPolicy.
+
+If you need the old behavior, explicitly set values back in your module call.
+
 ## v3 (from v2.x)
 
 ### Breaking Changes
