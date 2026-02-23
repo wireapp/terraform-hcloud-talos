@@ -2,9 +2,16 @@ resource "talos_machine_secrets" "this" {
   talos_version = var.talos_version
 }
 
+resource "tls_private_key" "apiserver_service_account" {
+  count     = var.apiserver_sa_key == null ? 1 : 0
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
 locals {
   api_port_k8s        = 6443
   api_port_kube_prism = 7445
+  apiserver_sa_key    = var.apiserver_sa_key != null ? var.apiserver_sa_key : base64encode(tls_private_key.apiserver_service_account[0].private_key_pem)
 
   best_public_ipv4 = (
     var.enable_floating_ip ?

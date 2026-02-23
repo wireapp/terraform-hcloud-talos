@@ -2,7 +2,7 @@ locals {
   # https://github.com/hetznercloud/hcloud-cloud-controller-manager/blob/main/docs/deploy_with_networks.md#considerations-on-the-ip-ranges
   network_ipv4_cidr        = var.network_ipv4_cidr
   node_ipv4_cidr           = var.node_ipv4_cidr
-  node_ipv4_cidr_mask_size = split("/", local.node_ipv4_cidr)[1] # 24
+  node_ipv4_cidr_mask_size = var.node_ipv4_pod_cidr_mask_size
   pod_ipv4_cidr            = var.pod_ipv4_cidr
   service_ipv4_cidr        = var.service_ipv4_cidr
 }

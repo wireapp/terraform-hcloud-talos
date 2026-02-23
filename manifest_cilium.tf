@@ -72,8 +72,36 @@ data "helm_template" "cilium_default" {
       value = local.api_port_kube_prism
     },
     {
+      name  = "k8sNetworkPolicy.enabled"
+      value = var.cilium_enable_k8s_network_policy ? "true" : "false"
+    },
+    {
       name  = "hubble.enabled"
-      value = "false"
+      value = var.cilium_hubble_enabled ? "true" : "false"
+    },
+    {
+      name  = "hubble.tls.auto.method"
+      value = var.cilium_hubble_tls_auto_method
+    },
+    {
+      name  = "hubble.relay.enabled"
+      value = var.cilium_hubble_relay_enabled ? "true" : "false"
+    },
+    {
+      name  = "hubble.relay.replicas"
+      value = tostring(var.cilium_hubble_relay_replicas)
+    },
+    {
+      name  = "hubble.ui.enabled"
+      value = var.cilium_hubble_ui_enabled ? "true" : "false"
+    },
+    {
+      name  = "hubble.ui.replicas"
+      value = tostring(var.cilium_hubble_ui_replicas)
+    },
+    {
+      name  = "hubble.metrics.enabled"
+      value = "{${join(",", var.cilium_hubble_metrics)}}"
     },
     {
       name  = "prometheus.serviceMonitor.enabled"
