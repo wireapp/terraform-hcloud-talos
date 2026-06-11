@@ -5,6 +5,9 @@ locals {
       machine = {
         install = {
           image = "ghcr.io/siderolabs/installer:${var.talos_version}"
+          extraKernelArgs = [
+            "talos.hostname=${worker.name}"
+          ]
         }
         certSANs = local.cert_SANs
         kubelet = merge(
