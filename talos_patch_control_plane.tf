@@ -5,6 +5,9 @@ locals {
       machine = {
         install = {
           image = "ghcr.io/siderolabs/installer:${var.talos_version}"
+          extraKernelArgs = [
+            "talos.hostname=${control_plane.name}"
+          ]
         }
         certSANs = local.cert_SANs
         kubelet = merge(
@@ -168,7 +171,7 @@ locals {
                 name: hcloud
                 namespace: kube-system
               data:
-                network: ${base64encode(hcloud_network.this.id)}
+                network: ${base64encode(local.network_id)}
                 token: ${base64encode(var.hcloud_token)}
             EOT
           }

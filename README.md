@@ -4,7 +4,7 @@
   <h1 style="margin-top: 0; padding-top: 0;">Terraform - Hcloud - Talos</h1>
   <img alt="GitHub Release" src="https://img.shields.io/github/v/release/hcloud-talos/terraform-hcloud-talos?logo=github">
   <p>
-    <a href="https://hetzner.cloud/?ref=9EF3RYocQW8y">New to Hetzner? Get 20€ credit</a>
+    <a href="https://hetzner.cloud/?ref=9EF3RYocQW8y">New to Hetzner? Get 20€ credit (and support this project)!</a>
   </p>
   <p>
     <a href="https://www.buymeacoffee.com/mrclrchtr"><img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=mrclrchtr&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a coffee" /></a>
@@ -55,7 +55,7 @@ This repository contains a Terraform module for creating a Kubernetes cluster wi
      - The IP of an external TCP load balancer you configure separately (pass-through, no TLS termination).
      - The public IP of a specific control plane node (less recommended for multi-node control planes).
   - The generated `kubeconfig` will use this hostname if `kubeconfig_endpoint_mode = "public_endpoint"`.
-  - The generated `talosconfig` will always use direct per-node IPs as endpoints (see `talosconfig_endpoints_mode`).
+  - The generated `talosconfig` uses direct per-node IPs by default and can optionally use endpoint hostnames via `talosconfig_endpoints_mode`.
   - **Note:** `cluster_api_host` is the Kubernetes API endpoint (TCP/6443). Talos API access uses TCP/50000 and is
     configured separately via `talosconfig_endpoints_mode`.
 - **Internal API Endpoint:**
@@ -75,6 +75,13 @@ This repository contains a Terraform module for creating a Kubernetes cluster wi
     (controlled by `kubeconfig_endpoint_mode`, defaulting to the first control plane's public IP or the Floating IP).
   - `talosconfig` endpoints are configured separately via `talosconfig_endpoints_mode`.
   - Internal communication will still use the internal API hostname (defaults to `kube.[cluster_domain]`) if `enable_alias_ip = true`.
+- **Private Bootstrap (`bootstrap_endpoint_mode`):**
+  - When running Terraform from a host with VPN/private network access (WireGuard, Tailscale, site-to-site VPN),
+    set `bootstrap_endpoint_mode = "private_ip"` so Terraform bootstraps and health-checks the cluster via private IPs
+    instead of public IPs.
+  - Combine with `disable_public_ipv4 = true` to provision nodes without public IPv4 addresses entirely.
+  - See the [WireGuard VPN example](#vpn-only-private-bootstrap-with-wireguard) for a tested setup using Talos's
+    built-in WireGuard.
 
 ## Additional installed software in the cluster
 
@@ -125,8 +132,11 @@ This repository contains a Terraform module for creating a Kubernetes cluster wi
 ### Required Software
 
 - [terraform](https://www.terraform.io/downloads.html)
-- [packer](https://www.packer.io/downloads)
 - [helm](https://helm.sh/docs/intro/install/)
+
+### Optional Legacy Software
+
+- [packer](https://www.packer.io/downloads) for the deprecated `_packer/` workflow, which is no longer maintained
 
 ### Recommended Software
 
@@ -147,7 +157,7 @@ This repository contains a Terraform module for creating a Kubernetes cluster wi
 
 ## Usage
 
-### 1. Build Talos Images with Packer (Optional)
+### 1. Create Talos Images with `terraform-provider-imager` (Recommended)
 
 > [!TIP]
 > You can use official Hetzner Talos ISOs by setting `talos_iso_id_x86` and/or `talos_iso_id_arm` (but these are usually outdated – check the versions!).
@@ -156,7 +166,45 @@ This repository contains a Terraform module for creating a Kubernetes cluster wi
 > You can also use custom Talos image by setting `talos_image_id_x86` and/or `talos_image_id_arm`.
 > List Talos image IDs: `hcloud image list`
 
-Before deploying with Terraform, you need Talos OS images (snapshots) available in your Hetzner Cloud project. This module provides Packer configurations to build these images.
+> [!WARNING]
+> Prefer custom Talos images/snapshots created with `terraform-provider-imager` over the official Hetzner Talos ISOs.
+> Some Hetzner-provided Talos ISOs have booted Talos in `metal` mode instead of `hcloud`, which leads to incorrect
+> node `providerID`s such as `talos://metal/...`. This breaks `hcloud-cloud-controller-manager` route creation and can
+> cause pod-to-pod networking failures across nodes.
+> If you still use `talos_iso_id_x86` or `talos_iso_id_arm`, verify the current ISO version carefully first.
+> See [#417](https://github.com/hcloud-talos/terraform-hcloud-talos/issues/417).
+
+Before deploying with Terraform, you need Talos OS images (snapshots) available in your Hetzner Cloud project. The maintained workflow is to create those snapshots directly from Terraform with the companion provider [`hcloud-talos/imager`](https://github.com/hcloud-talos/terraform-provider-imager).
+
+```hcl
+terraform {
+  required_providers {
+    imager = {
+      source = "hcloud-talos/imager"
+    }
+  }
+}
+
+provider "imager" {
+  token = var.hcloud_token
+}
+
+resource "imager_image" "talos_x86" {
+  image_url    = "https://factory.talos.dev/image/<schematic-id>/<talos-version>/hcloud-amd64.raw.xz"
+  architecture = "x86"
+
+  labels = {
+    version = var.talos_version
+  }
+}
+```
+
+Pass the resulting snapshot IDs into this module with `talos_image_id_x86` and `talos_image_id_arm`. A complete runnable example is available in [`examples/extended`](examples/extended).
+
+### 2. Packer Workflow (Deprecated, No Longer Maintained)
+
+> [!WARNING]
+> The `_packer/` workflow is deprecated and no longer maintained. Use [`hcloud-talos/imager`](https://github.com/hcloud-talos/terraform-provider-imager) for new clusters and future updates.
 
 - **Purpose:** Creates ARM and x86 Talos OS snapshots compatible with Hetzner Cloud.
 - **Location:** All Packer-related files are in the `_packer/` directory.
@@ -168,9 +216,9 @@ Before deploying with Terraform, you need Talos OS images (snapshots) available 
 - **Customization:** You can build standard Talos images or create custom images with additional system extensions using the Talos Image Factory.
 - **Versioning:** Ensure the `talos_version` used during the Packer build matches the `talos_version` variable set in your Terraform configuration to avoid potential incompatibilities.
 
-> **Detailed Instructions:** For comprehensive steps on building default images, using the Image Factory for custom extensions, and managing Talos versions (including how to override the default version), please refer to the **[`_packer/README.md`](_packer/README.md)** file.
+> **Legacy Instructions:** If you still need the deprecated Packer flow, refer to **[`_packer/README.md`](_packer/README.md)**.
 
-### 2. Deploy the Cluster with Terraform
+### 3. Deploy the Cluster with Terraform
 
 Use the module as shown in the following working minimal example:
 
@@ -195,7 +243,7 @@ module "talos" {
   # talos_iso_id_x86 = "<x86-iso-id>"
   # talos_iso_id_arm = "<arm-iso-id>"
 
-  # Optional: use custom Talos image IDs (snapshots) instead
+  # Optional: use custom Talos image IDs (snapshots) created by terraform-provider-imager instead
   # talos_image_id_x86 = "<x86-image-id>"
   # talos_image_id_arm = "<arm-image-id>"
 
@@ -292,19 +340,94 @@ module "talos" {
 
 These snippets show only the endpoint- and access-related settings. Combine them with the required module inputs from the examples above.
 
-#### VPN-only (private kubeconfig/talosconfig)
+#### VPN-only (private bootstrap with WireGuard)
 
-Use this when your workstation/CI reaches the nodes via VPN/private networking, but the public firewall should still allow your current public IP (so Terraform can bootstrap and manage the cluster).
+Use Talos's built-in [WireGuard](https://www.talos.dev/v1.13/networking/advanced/wireguard/) to bootstrap and manage the cluster over private IPs. No site-to-site VPN VM or external DNS needed.
 
+**On the cluster side** (added as a machine config patch):
 ```hcl
-firewall_use_current_ip = true
+talos_control_plane_extra_config_patches = [
+  yamlencode({
+    apiVersion = "v1alpha1"
+    kind       = "WireguardConfig"
+    name       = "wg0"
+    privateKey = "<base64-node-private-key>"
+    listenPort = 51820
+    addresses  = [{ address = "10.200.0.1/24" }]
+    peers = [{
+      publicKey  = "<base64-workstation-public-key>"
+      allowedIPs = ["10.200.0.0/24"]
+    }]
+  })
+]
 
-# Use the private VIP via a VPN-resolvable hostname (split-horizon DNS).
-enable_alias_ip            = true # default
-cluster_api_host_private   = "kube.vpn.example.com" # -> 10.0.1.100 (private VIP)
-kubeconfig_endpoint_mode   = "private_endpoint"
+extra_firewall_rules = [
+  {
+    direction   = "in"
+    protocol    = "udp"
+    port        = "51820"
+    source_ips  = ["0.0.0.0/0"]
+    description = "WireGuard VPN tunnel"
+  }
+]
+```
+
+**On your workstation** (macOS WireGuard app or `wg-quick`):
+```ini
+[Interface]
+PrivateKey = <base64-workstation-private-key>
+Address = 10.200.0.250/24
+
+[Peer]
+PublicKey = <base64-node-public-key>
+Endpoint = <control-plane-public-ip>:51820
+AllowedIPs = 10.200.0.0/24, 10.0.1.0/24
+PersistentKeepalive = 25
+```
+
+Once the tunnel is active, switch to private bootstrap:
+```hcl
+bootstrap_endpoint_mode    = "private_ip"
+kubeconfig_endpoint_mode   = "private_ip"
 talosconfig_endpoints_mode = "private_ip"
 ```
+
+> [!NOTE]
+> - The WireGuard patch is applied at node boot time (part of the Talos machine config).
+> - For the initial deployment, bootstrap still uses public IPs (`bootstrap_endpoint_mode = "public_ip"`, the default).
+> - After nodes boot with the WireGuard interface active, enable private bootstrap for subsequent operations.
+
+#### VPN-only (site-to-site VPN gateway)
+
+Use this when you already have a VPN gateway VM (`10.0.1.250`) on the same private network, or when you have split-horizon DNS resolving `kube.vpn.example.com` to the private VIP (`10.0.1.100`).
+
+```hcl
+enable_alias_ip            = true # default
+cluster_api_host_private   = "kube.vpn.example.com" # -> 10.0.1.100 (private VIP)
+
+bootstrap_endpoint_mode    = "private_ip"
+kubeconfig_endpoint_mode   = "private_ip"  # uses 10.0.1.100 directly
+# kubeconfig_endpoint_mode = "private_endpoint"  # alternative: requires DNS
+
+talosconfig_endpoints_mode = "private_ip"
+
+# Optional: remove public IPv4 entirely
+# disable_public_ipv4      = true
+```
+
+#### Fully Private (no public IPv4)
+
+Provision nodes without public IPv4 addresses for maximum cost optimization and minimum attack surface. Requires the WireGuard tunnel or VPN gateway to be active before applying.
+
+```hcl
+bootstrap_endpoint_mode    = "private_ip"
+disable_public_ipv4        = true
+kubeconfig_endpoint_mode   = "private_ip"
+talosconfig_endpoints_mode = "private_ip"
+```
+
+> [!WARNING]
+> When `disable_public_ipv4 = true`, nodes have no public IPs. All Terraform operations (bootstrap, health check, kubeconfig retrieval) use private IPs via the WireGuard tunnel or VPN gateway. Ensure your tunnel is active and reachable before applying.
 
 #### Floating IP (public VIP)
 
@@ -343,6 +466,103 @@ cluster_api_host_private   = "kube.internal.example.com" # -> 10.0.1.100 (privat
 cluster_api_host           = "kube.example.com" # -> public Floating IP or TCP LB
 kubeconfig_endpoint_mode   = "public_endpoint"
 talosconfig_endpoints_mode = "public_ip"
+```
+
+### VPN Site-to-Site (Shared Private Network)
+
+You can attach a VPN gateway VM (from another Terraform module) to the same private network as the cluster, allowing secure access from remote locations without exposing services to the public internet.
+
+**How it works:**
+- The VPN gateway VM gets a private IP in the cluster's node subnet (e.g., `10.0.1.250`)
+- The gateway does SNAT/masquerading for VPN client traffic, so cluster nodes see traffic as originating from the gateway's private IP
+- No extra routes needed on cluster nodes — return traffic goes directly to the gateway on the same subnet
+
+**Pattern A — Reference the network from another module:**
+
+```hcl
+module "cluster" {
+  source  = "hcloud-talos/talos/hcloud"
+  version = "<latest-version>"
+
+  hcloud_token            = "your-hcloud-token"
+  firewall_use_current_ip = true
+  cluster_name            = "vpn-cluster"
+  location_name           = "fsn1"
+
+  control_plane_nodes = [
+    { id = 1, type = "cax11" }
+  ]
+}
+
+# In your VPN gateway module, consume the outputs:
+module "vpn_gateway" {
+  source = "./vpn-gateway"
+
+  hcloud_network_id = module.cluster.hetzner_network_id
+  node_subnet_cidr  = module.cluster.node_ipv4_cidr
+  # Give the VPN gateway a private IP in the same subnet, e.g., 10.0.1.250
+}
+```
+
+**Pattern B — Share a network between cluster and VPN modules (BYO network):**
+
+```hcl
+# Create the shared network once
+resource "hcloud_network" "shared" {
+  name     = "shared-net"
+  ip_range = "10.0.0.0/16"
+}
+
+resource "hcloud_network_subnet" "shared" {
+  network_id   = hcloud_network.shared.id
+  type         = "cloud"
+  network_zone = "eu-central"
+  ip_range     = "10.0.1.0/24"
+}
+
+# Pass it to the cluster module
+module "cluster" {
+  source  = "hcloud-talos/talos/hcloud"
+  version = "<latest-version>"
+
+  hcloud_token            = "your-hcloud-token"
+  firewall_use_current_ip = true
+  cluster_name            = "vpn-cluster"
+  location_name           = "fsn1"
+
+  # BYO network: module uses this instead of creating a new one
+  network_id       = hcloud_network.shared.id
+  node_ipv4_cidr   = "10.0.1.0/24" # must match the existing subnet
+
+  control_plane_nodes = [
+    { id = 1, type = "cax11" }
+  ]
+}
+
+# VPN gateway attached to the same network
+module "vpn_gateway" {
+  source = "./vpn-gateway"
+
+  hcloud_network_id = hcloud_network.shared.id
+  node_subnet_cidr  = "10.0.1.0/24"
+}
+```
+
+**Adding network routes for VPN client subnets:**
+
+If you want proper routing (instead of SNAT) between VPN clients and cluster nodes, add static routes to the Hetzner network:
+
+```hcl
+module "cluster" {
+  # ... other settings ...
+
+  network_routes = [
+    {
+      destination = "10.8.0.0/24"   # VPN client subnet
+      gateway     = "10.0.1.250"    # VPN gateway private IP
+    }
+  ]
+}
 ```
 
 ### Mixed Worker Node Types
@@ -500,8 +720,9 @@ To upgrade your Kubernetes cluster, you must use the `talosctl upgrade-k8s` comm
 
 **Important Considerations for `talosctl` commands:**
 
-- **Talos API Endpoints:** `talosctl` talks to the Talos API (TCP/50000). Use `talosconfig_endpoints_mode = "public_ip"`
-  when running `talosctl` from outside, or `"private_ip"` when running over VPN/private networking.
+- **Talos API Endpoints:** `talosctl` talks to the Talos API (TCP/50000). Prefer `talosconfig_endpoints_mode = "public_ip"`
+  when running from outside, or `"private_ip"` over VPN/private networking. Endpoint hostname modes
+  (`"public_endpoint"` / `"private_endpoint"`) are also available for explicit gateway/proxy workflows.
 - **Avoid VIP/Load-Balanced Endpoints:** Talos recommends using direct per-node IPs as endpoints in `talosconfig` (not a
   VIP), because VIP availability depends on etcd health.
 - **Firewall Access:**

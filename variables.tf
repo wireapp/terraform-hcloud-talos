@@ -119,22 +119,49 @@ variable "kubeconfig_endpoint_mode" {
   EOF
 }
 
+variable "bootstrap_endpoint_mode" {
+  type    = string
+  default = "public_ip"
+  validation {
+    condition     = contains(["public_ip", "private_ip"], var.bootstrap_endpoint_mode)
+    error_message = "Invalid bootstrap_endpoint_mode. Valid values: public_ip, private_ip."
+  }
+  description = <<EOF
+    Configure how Terraform reaches Talos during bootstrap, kubeconfig retrieval, and health checks.
+
+    Values:
+    - `public_ip`: Use the first control plane public IP (default, backward compatible).
+    - `private_ip`: Use the first control plane private IP (requires VPN/private network access).
+  EOF
+}
+
 variable "talosconfig_endpoints_mode" {
   type    = string
   default = "public_ip"
   validation {
-    condition     = contains(["public_ip", "private_ip"], var.talosconfig_endpoints_mode)
-    error_message = "Invalid talosconfig_endpoints_mode. Valid values: public_ip, private_ip."
+    condition     = contains(["public_ip", "private_ip", "public_endpoint", "private_endpoint"], var.talosconfig_endpoints_mode)
+    error_message = "Invalid talosconfig_endpoints_mode. Valid values: public_ip, private_ip, public_endpoint, private_endpoint."
+  }
+  validation {
+    condition     = var.talosconfig_endpoints_mode != "public_endpoint" || var.cluster_api_host != null
+    error_message = "talosconfig_endpoints_mode = \"public_endpoint\" requires cluster_api_host to be set."
+  }
+  validation {
+    condition     = var.talosconfig_endpoints_mode != "private_endpoint" || var.cluster_api_host_private != null
+    error_message = "talosconfig_endpoints_mode = \"private_endpoint\" requires cluster_api_host_private to be set."
   }
   description = <<EOF
-    Configure which addresses are written into the generated `talosconfig` as Talos API endpoints.
+    Configure which endpoints are written into the generated `talosconfig` as Talos API endpoints.
 
-    Note: Talos recommends using direct per-node IPs as endpoints (not a VIP or load-balanced hostname), so this module
-    only supports IP lists.
+    Recommended:
+    - Prefer `public_ip` or `private_ip` (direct per-node Talos endpoints).
+    - Use endpoint hostname modes only when you intentionally proxy/load-balance Talos API traffic.
 
     Values:
     - `public_ip`: Use public IPs of all control plane nodes.
     - `private_ip`: Use private IPs of all control plane nodes.
+    - `public_endpoint`: Use `cluster_api_host` (requires it to be set).
+    - `private_endpoint`: Use `cluster_api_host_private` (requires it to be set).
   EOF
 }
 
@@ -233,6 +260,22 @@ variable "enable_ipv6" {
   EOF
 }
 
+variable "disable_public_ipv4" {
+  type        = bool
+  default     = false
+  description = <<EOF
+    If true, do not assign public IPv4 addresses to control plane and worker nodes.
+
+    Requires `bootstrap_endpoint_mode = "private_ip"` and private network reachability
+    from the Terraform runner (for example via site-to-site VPN or a bastion host).
+  EOF
+
+  validation {
+    condition     = !var.disable_public_ipv4 || var.bootstrap_endpoint_mode == "private_ip"
+    error_message = "disable_public_ipv4 requires bootstrap_endpoint_mode = \"private_ip\"."
+  }
+}
+
 variable "enable_kube_span" {
   type        = bool
   default     = false
@@ -271,6 +314,44 @@ variable "node_ipv4_pod_cidr_mask_size" {
     condition     = can(regex("^(3[0-2]|[12]?[0-9])$", var.node_ipv4_pod_cidr_mask_size))
     error_message = "node_ipv4_pod_cidr_mask_size must be between 0 and 32."
   }
+}
+
+variable "network_id" {
+  type        = string
+  default     = null
+  description = <<EOF
+    Optional. ID of an existing Hetzner Cloud network to use instead of creating one.
+    When set, the module will not create a new network or subnet — both must already exist.
+    Use this for VPN site-to-site setups where the network is shared between modules
+    (e.g., a separate infra module creates the network, and both the cluster and VPN
+    gateway modules consume it).
+
+    The existing subnet must match `node_ipv4_cidr`.
+  EOF
+
+  validation {
+    condition     = var.network_id == null || try(tonumber(var.network_id), null) != null
+    error_message = "network_id must be a valid Hetzner Cloud network ID (numeric)."
+  }
+}
+
+variable "network_routes" {
+  type = list(object({
+    destination = string
+    gateway     = string
+  }))
+  default     = []
+  description = <<EOF
+    Optional. Network routes to add to the Hetzner Cloud network.
+    Useful for VPN site-to-site setups where VPN clients are in a different subnet.
+    Each route must specify a destination CIDR and a gateway IP (the private IP
+    of the VPN gateway VM within the same network).
+
+    Example:
+    [
+      { destination = "10.8.0.0/24", gateway = "10.0.1.250" }
+    ]
+  EOF
 }
 
 # Server
