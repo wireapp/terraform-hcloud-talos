@@ -357,6 +357,7 @@ variable "network_routes" {
 # Server
 variable "talos_version" {
   type        = string
+  default     = "v1.13.5"
   description = "The version of talos features to use in generated machine configurations."
 }
 
@@ -616,7 +617,7 @@ variable "kube_api_extra_args" {
 
 variable "kubernetes_version" {
   type        = string
-  default     = "1.34.4"
+  default     = "1.36.2"
   description = <<EOF
     The Kubernetes version to use.
 
@@ -710,10 +711,13 @@ variable "registries" {
 # Deployments
 variable "cilium_version" {
   type        = string
-  default     = "1.19.1"
+  default     = "1.19.5"
   description = <<EOF
     The version of Cilium to deploy.
     Needs to be compatible with the `kubernetes_version`: https://docs.cilium.io/en/stable/network/kubernetes/compatibility/
+    NOTE: Cilium 1.19.x is e2e-tested only through Kubernetes 1.34; K8s 1.36 is expected to work via
+    API backward-compat but is outside the tested matrix. Bump to 1.20.x once it is GA (targeted ~end
+    July 2026), which is the officially-supported line for K8s 1.36.
   EOF
 }
 
