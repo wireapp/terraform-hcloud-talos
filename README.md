@@ -237,7 +237,7 @@ module "talos" {
   # https://registry.terraform.io/modules/hcloud-talos/talos/hcloud
   version = "<latest-version>" # Replace with the latest version number
 
-  talos_version = "v1.12.2" # The version of talos features to use in generated machine configurations
+  talos_version = "v1.13.9" # The version of talos features to use in generated machine configurations
 
   # Optional: use official Hetzner Talos ISO IDs (no custom Packer image required)
   # talos_iso_id_x86 = "<x86-iso-id>"
@@ -275,9 +275,9 @@ module "talos" {
   version = "<latest-version>" # Replace with the latest version number
 
   # Use versions compatible with each other and supported by the module/Talos
-  talos_version      = "v1.12.2"
-  kubernetes_version = "1.35.0"
-  cilium_version     = "1.16.2"
+  talos_version      = "v1.13.9"
+  kubernetes_version = "1.36.3"
+  cilium_version     = "1.20.1"
 
   hcloud_token = "your-hcloud-token"
 
@@ -574,8 +574,8 @@ module "talos" {
   source  = "hcloud-talos/talos/hcloud"
   version = "<latest-version>"
 
-  talos_version      = "v1.12.2"
-  kubernetes_version = "1.35.0"
+  talos_version      = "v1.13.9"
+  kubernetes_version = "1.36.3"
 
   hcloud_token            = "your-hcloud-token"
   firewall_use_current_ip = true

@@ -36,7 +36,7 @@ locals {
     ]
   ]))
 
-  talos_version = "v1.12.2"
+  talos_version = "v1.13.9"
 }
 
 provider "hcloud" {
@@ -83,7 +83,7 @@ module "talos" {
   hcloud_token = local.hcloud_token
 
   talos_version      = local.talos_version
-  kubernetes_version = "1.35.0"
+  kubernetes_version = "1.36.3"
   talos_image_id_x86 = imager_image.talos_x86.id
 
   disable_arm = true
@@ -144,7 +144,7 @@ module "talos" {
 
   # Cilium bootstrap values - GitOps manages post-bootstrap (ArgoCD in my case)
   deploy_cilium  = true # set to false after first deployment and let GitOps handle upgrades
-  cilium_version = "1.18.5"
+  cilium_version = "1.20.1"
   # cilium_values  = [templatefile("../path/to/your/git-ops/cilium/values.yaml", {})]
 
   deploy_prometheus_operator_crds  = true # set to false after first deployment and let GitOps handle upgrades
