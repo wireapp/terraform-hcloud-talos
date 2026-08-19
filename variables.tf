@@ -852,8 +852,8 @@ variable "deploy_hcloud_ccm" {
 
 variable "hcloud_ccm_version" {
   type        = string
-  default     = "1.30.0"
-  description = "The version of the Hetzner Cloud Controller Manager to deploy."
+  default     = "1.35.0"
+  description = "The version of the Hetzner Cloud Controller Manager to deploy. Kubernetes 1.36 requires HCCM 1.31.0 or later."
 }
 
 variable "disable_talos_coredns" {
