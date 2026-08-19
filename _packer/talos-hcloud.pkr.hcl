@@ -10,7 +10,7 @@ packer {
 
 variable "talos_version" {
   type    = string
-  default = "v1.12.2"
+  default = "v1.13.9"
 }
 
 variable "image_url_arm" {
